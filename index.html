@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Catálogo & Orçamentos de Móveis</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<style type="text/tailwindcss">
+  :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+  .inp{@apply w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500}
+  .lbl{@apply block text-xs font-semibold uppercase text-slate-500 mb-1}
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen pb-24">
+
+<header class="bg-slate-900 text-white shadow-md">
+  <div class="max-w-7xl mx-auto px-4 py-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+    <div class="flex items-center gap-3">
+      <div class="bg-blue-600 p-3 rounded-xl text-2xl">🛋️</div>
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight">Catálogo & Orçamentos</h1>
+        <p class="text-xs text-slate-400">Controle de montagem, valores e reajuste por inflação</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+    <button id="btnAba" onclick="alternarAba()" class="bg-blue-600 hover:bg-blue-500 text-white w-11 h-11 rounded-xl text-2xl font-bold" title="Cadastrar móvel">+</button>
+    <div class="bg-slate-800/80 border border-slate-700 px-4 py-2.5 rounded-xl flex items-center gap-4 text-sm">
+      <div>
+        <span class="block text-[10px] uppercase font-semibold text-slate-400">Taxa de Inflação Mensal</span>
+        <div class="flex items-center gap-1.5 mt-0.5">
+          <input type="number" id="taxaInflacao" value="0.5" step="0.1" min="0" class="w-16 bg-slate-900 text-white border border-slate-700 rounded px-2 py-0.5 text-right font-medium focus:outline-none focus:border-blue-500">
+          <span class="text-slate-300 font-medium">% a.m.</span>
+        </div>
+      </div>
+      <button onclick="salvarTaxaInflacao()" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg font-medium text-xs">Atualizar</button>
+    </div>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 mt-8 space-y-8">
+  <div class="grid grid-cols-3 gap-2 sm:gap-4" id="stats"></div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div class="lg:col-span-2 space-y-6">
+
+      <div id="viewCadastro" class="hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+        <h2 id="formTitle" class="text-lg font-bold text-slate-900 mb-4">➕ Cadastrar Novo Móvel</h2>
+        <form id="movelForm" onsubmit="salvarMovel(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <input type="hidden" id="movelId">
+          <div class="sm:col-span-2">
+            <label class="lbl">Nome do Móvel / Descrição</label>
+            <input type="text" id="nome" required placeholder="Ex: Guarda-Roupa Casal 6 Portas" class="inp">
+          </div>
+          <div>
+            <label class="lbl">Categoria</label>
+            <select id="categoria" class="inp">
+              <option>Quarto</option><option>Cozinha</option><option>Sala</option>
+              <option>Escritório</option><option>Banheiro</option><option>Outros</option>
+            </select>
+          </div>
+          <div>
+            <label class="lbl">Data de Referência do Preço</label>
+            <input type="date" id="dataCadastro" required class="inp">
+          </div>
+          <div>
+            <label class="lbl">Tempo de Montagem</label>
+            <div class="grid grid-cols-2 gap-2">
+              <input type="number" id="tempoHoras" min="0" placeholder="Horas" required class="inp">
+              <input type="number" id="tempoMinutos" min="0" max="59" placeholder="Min" required class="inp">
+            </div>
+          </div>
+          <div>
+            <label class="lbl">Preço à Vista (R$)</label>
+            <input type="number" id="precoBase" step="0.01" min="0" required placeholder="0,00" class="inp">
+          </div>
+          <div>
+            <label class="lbl">Preço no Cartão (R$)</label>
+            <input type="number" id="precoCartao" step="0.01" min="0" required placeholder="0,00" class="inp">
+          </div>
+          <div class="sm:col-span-2">
+            <label class="lbl">Foto do Móvel (obrigatória)</label>
+            <input type="file" id="fotoFile" accept="image/*" onchange="converterImagem(event)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-500">
+            <input type="hidden" id="fotoBase64">
+            <img id="fotoPreview" alt="" class="hidden mt-3 h-40 rounded-xl object-cover border border-slate-200">
+          </div>
+          <div class="sm:col-span-2 flex justify-end gap-3 mt-2">
+            <button type="button" id="btnCancelar" onclick="mostrarAba(false)" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 px-5 py-2.5 rounded-xl font-medium text-sm">Cancelar</button>
+            <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-xl font-medium text-sm">Salvar Móvel</button>
+          </div>
+        </form>
+      </div>
+
+      <div id="viewLista" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+        <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
+          <h2 class="text-lg font-bold text-slate-900">📋 Catálogo de Móveis</h2>
+          <input type="text" id="filtroBusca" oninput="renderizarLista()" placeholder="Buscar móvel..." class="inp sm:w-48 !py-1.5">
+        </div>
+        <div id="listaMoveis" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+      </div>
+    </div>
+
+    <div id="viewOrc" class="hidden lg:block">
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 lg:sticky lg:top-6">
+        <h2 class="text-lg font-bold text-slate-900 mb-2">🧮 Simulador de Orçamento</h2>
+        <button id="btnFecharOrc" onclick="abrirOrc(false)" class="hidden w-full mb-3 bg-slate-100 text-slate-700 rounded-lg py-2 text-sm font-semibold">✕ Fechar</button>
+        <p class="text-xs text-slate-400 mb-4">Toque na foto ou em "+ Adicionar" no catálogo para montar o orçamento.</p>
+        <div id="orcamentoSelecao" class="space-y-2 max-h-60 overflow-y-auto pr-1 border border-slate-100 rounded-xl p-2 bg-slate-50/50 mb-4"></div>
+        <div class="mb-4">
+          <label class="lbl">Desconto (opcional)</label>
+          <div class="grid grid-cols-3 gap-2">
+            <input type="number" id="descontoValor" min="0" step="0.01" placeholder="0" oninput="atualizarOrcamento()" class="inp col-span-2">
+            <select id="descontoTipo" onchange="atualizarOrcamento()" class="inp"><option value="%">%</option><option value="R$">R$</option></select>
+          </div>
+        </div>
+        <div class="mb-4">
+          <label class="lbl">Parcelar no cartão em</label>
+          <select id="parcelas" onchange="atualizarOrcamento()" class="inp"><option value="1">1x</option><option value="2">2x</option><option value="3">3x</option><option value="4">4x</option><option value="5">5x</option><option value="6">6x</option><option value="7">7x</option><option value="8">8x</option><option value="9">9x</option><option value="10">10x</option><option value="11">11x</option><option value="12">12x</option></select>
+        </div>
+        <div class="bg-slate-900 text-white p-5 rounded-2xl space-y-4">
+          <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+            <span class="text-xs font-semibold text-slate-400 uppercase">Tempo Total</span>
+            <span id="orcTempoTotal" class="text-lg font-bold">0h 00m</span>
+          </div>
+          <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+            <span class="text-xs font-semibold text-slate-400 uppercase">Valor Base Total</span>
+            <span id="orcValorBase" class="text-sm font-medium text-slate-300">R$ 0,00</span>
+          </div>
+          <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+            <span class="text-xs font-semibold text-slate-400 uppercase">Subtotal c/ Inflação</span>
+            <span id="orcSubtotal" class="text-sm font-medium text-slate-300">R$ 0,00</span>
+          </div>
+          <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+            <span class="text-xs font-semibold text-slate-400 uppercase">Desconto</span>
+            <span id="orcDesconto" class="text-sm font-medium text-amber-400">R$ 0,00</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-xs font-semibold text-emerald-400 uppercase">Total à Vista</span>
+            <span id="orcValorFinal" class="text-2xl font-extrabold text-emerald-400">R$ 0,00</span>
+          </div>
+          <div class="flex justify-between items-start border-t border-slate-800 pt-3">
+            <span class="text-xs font-semibold text-sky-400 uppercase">No Cartão</span>
+            <span class="text-right"><span id="orcValorCartao" class="block text-2xl font-extrabold text-sky-400">R$ 0,00</span><span id="orcParcela" class="block text-xs text-slate-400"></span></span>
+          </div>
+        </div>
+        <input type="tel" id="foneCliente" placeholder="WhatsApp do cliente (opcional)" class="inp mt-4">
+        <button onclick="copiarOrcamento(true)" class="w-full mt-2 bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl font-semibold text-sm">💬 Enviar pelo WhatsApp</button>
+        <button onclick="copiarOrcamento()" class="w-full mt-2 bg-slate-200 hover:bg-slate-300 text-slate-700 py-3 rounded-xl font-medium text-sm">📲 Copiar Orçamento p/ WhatsApp</button>
+        <p id="msgCopia" class="text-xs text-center text-slate-500 mt-2 min-h-[1rem]"></p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div id="barra" style="display:none;padding-bottom:calc(0.75rem + env(safe-area-inset-bottom,0px))" class="fixed bottom-0 inset-x-0 z-40 bg-slate-900 text-white px-4 pt-3 items-center justify-between">
+  <span id="barraInfo" class="text-sm font-semibold"></span>
+  <button onclick="abrirOrc(true)" class="bg-emerald-600 px-4 py-2 rounded-lg text-sm font-semibold">Ver orçamento ↓</button>
+</div>
+
+<div id="lightbox" onclick="this.classList.add('hidden')" class="hidden fixed inset-0 z-50 bg-black/85 flex flex-col items-center justify-center p-4 cursor-zoom-out">
+  <img id="lbImg" alt="" class="max-h-[80vh] max-w-full rounded-xl object-contain">
+  <p id="lbInfo" class="text-white text-sm font-medium mt-3 text-center"></p>
+</div>
+
+<script>
+const lerLS = (k, padrao) => { try { const v = JSON.parse(localStorage.getItem(k)); return v ?? padrao; } catch (e) { return padrao; } };
+const gravarLS = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { alert('Não foi possível salvar: armazenamento cheio ou indisponível. Tente usar fotos menores.'); return false; } };
+
+let moveis = lerLS('ts_moveis', []);
+let taxaMensal = Number(lerLS('ts_taxa_inflacao', 0.5));
+if (!Array.isArray(moveis)) moveis = [];
+if (isNaN(taxaMensal)) taxaMensal = 0.5;
+const selecionados = new Set();
+
+const $ = id => document.getElementById(id);
+const brl = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const hojeISO = () => new Date().toLocaleDateString('en-CA');
+const fmtTempo = min => `${Math.floor(min / 60)}h ${String(min % 60).padStart(2, '0')}m`;
+const minutos = m => m.tempoHoras * 60 + m.tempoMinutos;
+
+$('taxaInflacao').value = taxaMensal;
+$('dataCadastro').value = hojeISO();
+
+function salvarTaxaInflacao() {
+  const v = parseFloat($('taxaInflacao').value);
+  if (isNaN(v) || v < 0) return alert('Informe uma taxa válida (0 ou maior).');
+  taxaMensal = v;
+  gravarLS('ts_taxa_inflacao', v);
+  renderizarLista();
+}
+
+function converterImagem(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      const w = Math.min(800, img.width), c = document.createElement('canvas');
+      c.width = w; c.height = img.height * (w / img.width);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      $('fotoBase64').value = c.toDataURL('image/jpeg', 0.7);
+      $('fotoPreview').src = $('fotoBase64').value;
+      $('fotoPreview').classList.remove('hidden');
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function calcularValorComInflacao(precoBase, dataStr) {
+  if (!dataStr) return { valorCorrigido: precoBase, mesesTotais: 0, pct: 0 };
+  const d = new Date(dataStr + 'T00:00:00'), h = new Date();
+  let meses = (h.getFullYear() - d.getFullYear()) * 12 + (h.getMonth() - d.getMonth());
+  if (h.getDate() < d.getDate()) meses--;
+  if (meses < 0) meses = 0;
+  const fator = Math.pow(1 + taxaMensal / 100, meses);
+  return { valorCorrigido: precoBase * fator, mesesTotais: meses, pct: (fator - 1) * 100 };
+}
+
+function salvarMovel(e) {
+  e.preventDefault();
+  const id = $('movelId').value;
+  let foto = $('fotoBase64').value;
+  if (!foto && id) foto = (moveis.find(m => m.id == id) || {}).foto || '';
+  if (!foto) return alert('Adicione uma foto do móvel: ela é necessária para comparar com os pedidos de orçamento.');
+  const item = {
+    id: id ? Number(id) : Date.now(),
+    nome: $('nome').value.trim(),
+    categoria: $('categoria').value,
+    dataCadastro: $('dataCadastro').value,
+    tempoHoras: parseInt($('tempoHoras').value) || 0,
+    tempoMinutos: parseInt($('tempoMinutos').value) || 0,
+    precoBase: parseFloat($('precoBase').value) || 0,
+    precoCartao: parseFloat($('precoCartao').value) || 0,
+    foto
+  };
+  const anterior = moveis;
+  moveis = id ? moveis.map(m => m.id == id ? item : m) : [...moveis, item];
+  if (!gravarLS('ts_moveis', moveis)) { moveis = anterior; return; }
+  mostrarAba(false);
+  renderizarLista();
+}
+
+function limparFormulario() {
+  $('movelForm').reset();
+  $('movelId').value = '';
+  $('fotoBase64').value = '';
+  $('fotoPreview').classList.add('hidden');
+  $('dataCadastro').value = hojeISO();
+  $('formTitle').textContent = '➕ Cadastrar Novo Móvel';
+  $('btnCancelar').classList.add('hidden');
+}
+
+function editarMovel(id) {
+  const m = moveis.find(x => x.id == id);
+  if (!m) return;
+  $('movelId').value = m.id;
+  $('nome').value = m.nome;
+  $('categoria').value = m.categoria;
+  $('dataCadastro').value = m.dataCadastro;
+  $('tempoHoras').value = m.tempoHoras;
+  $('tempoMinutos').value = m.tempoMinutos;
+  $('precoBase').value = m.precoBase;
+  $('precoCartao').value = m.precoCartao || m.precoBase;
+  $('fotoBase64').value = '';
+  $('fotoPreview').src = m.foto || '';
+  $('fotoPreview').classList.toggle('hidden', !m.foto);
+  $('formTitle').textContent = '✏️ Editar Móvel';
+  $('btnCancelar').classList.remove('hidden');
+  mostrarAba(true);
+}
+
+function excluirMovel(id) {
+  if (!confirm('Deseja realmente excluir este móvel do catálogo?')) return;
+  moveis = moveis.filter(m => m.id != id);
+  selecionados.delete(Number(id));
+  gravarLS('ts_moveis', moveis);
+  renderizarLista();
+}
+
+let cadastroAberto = false;
+function mostrarAba(cad) {
+  cadastroAberto = cad;
+  $('viewCadastro').classList.toggle('hidden', !cad);
+  ['viewLista', 'stats'].forEach(i => $(i).classList.toggle('hidden', cad));
+  $('viewOrc').classList.toggle('lg:hidden', cad);
+  $('btnAba').textContent = cad ? '✕' : '+';
+  $('btnAba').title = cad ? 'Voltar ao catálogo' : 'Cadastrar móvel';
+  if (!cad) limparFormulario();
+  window.scrollTo({ top: 0 });
+  atualizarOrcamento();
+}
+function alternarAba() { mostrarAba(!cadastroAberto); }
+
+function abrirOrc(abrir) {
+  const v = $('viewOrc');
+  ['fixed', 'inset-0', 'z-50', 'overflow-y-auto', 'bg-slate-900/80', 'p-4'].forEach(c => v.classList.toggle(c, abrir));
+  v.classList.toggle('hidden', !abrir);
+  v.style.paddingTop = abrir ? 'calc(1rem + env(safe-area-inset-top, 0px))' : '';
+  $('btnFecharOrc').classList.toggle('hidden', !abrir);
+  document.body.style.overflow = abrir ? 'hidden' : '';
+}
+
+function valorCartao(m) {
+  return calcularValorComInflacao(m.precoCartao || m.precoBase, m.dataCadastro).valorCorrigido;
+}
+
+function calcDesconto(subtotal) {
+  const v = parseFloat($('descontoValor').value) || 0;
+  const d = $('descontoTipo').value === '%' ? subtotal * v / 100 : v;
+  return Math.min(Math.max(d, 0), subtotal);
+}
+
+function verFoto(id) {
+  const m = moveis.find(x => x.id == id);
+  if (!m || !m.foto) return;
+  $('lbImg').src = m.foto;
+  $('lbInfo').textContent = `${m.nome} · ${brl(calcularValorComInflacao(m.precoBase, m.dataCadastro).valorCorrigido)} · ${m.tempoHoras}h ${m.tempoMinutos}m`;
+  $('lightbox').classList.remove('hidden');
+}
+
+function alternarSelecao(id, marcado) {
+  marcado ? selecionados.add(id) : selecionados.delete(id);
+  renderizarLista();
+}
+
+function renderizarLista() {
+  const busca = $('filtroBusca').value.toLowerCase();
+  const filtrados = moveis.filter(m => m.nome.toLowerCase().includes(busca) || m.categoria.toLowerCase().includes(busca));
+
+  $('orcamentoSelecao').innerHTML = itensSelecionados().length ? itensSelecionados().map(m => `
+    <label class="flex items-center justify-between p-2 rounded-lg hover:bg-white cursor-pointer text-sm">
+      <span class="flex items-center gap-2">
+        <button type="button" onclick="alternarSelecao(${m.id}, false)" class="text-rose-500 font-bold px-1" title="Remover">✕</button>
+        ${m.foto ? `<img src="${m.foto}" alt="" class="w-9 h-9 rounded object-cover">` : ''}
+        <span class="font-medium text-slate-700">${esc(m.nome)}</span>
+      </span>
+      <span class="text-xs font-semibold text-emerald-600">${brl(calcularValorComInflacao(m.precoBase, m.dataCadastro).valorCorrigido)}</span>
+    </label>`).join('') : '<div class="text-center py-4 text-slate-400 text-xs">Nenhum móvel adicionado ainda.</div>';
+
+  $('listaMoveis').innerHTML = filtrados.length ? filtrados.map(m => {
+    const { valorCorrigido, mesesTotais, pct } = calcularValorComInflacao(m.precoBase, m.dataCadastro);
+    const img = m.foto ? `<img src="${m.foto}" alt="" onclick="alternarSelecao(${m.id}, ${!selecionados.has(m.id)})" class="w-full h-full object-cover cursor-pointer">` : '<div class="w-full h-full flex items-center justify-center text-sm text-rose-500 font-semibold">📷 Sem foto: edite e adicione</div>';
+    return `
+    <div class="bg-slate-50 border border-slate-200/80 rounded-2xl overflow-hidden flex flex-col justify-between hover:shadow-md transition ${selecionados.has(m.id) ? 'ring-4 ring-emerald-500' : ''}">
+      <div>
+        <div class="h-64 w-full overflow-hidden bg-slate-200 relative">${img}
+          <button onclick="verFoto(${m.id})" class="absolute top-2 right-2 bg-slate-900/70 text-white rounded-full w-8 h-8 text-sm" title="Ampliar">🔍</button>
+          <span class="absolute top-2 left-2 bg-slate-900/80 text-white text-[10px] px-2.5 py-1 rounded-full font-medium">${esc(m.categoria)}</span>
+        </div>
+        <div class="p-4">
+          <h3 class="font-bold text-slate-900 text-sm mb-1 truncate">${esc(m.nome)}</h3>
+          <div class="flex items-center gap-3 text-xs text-slate-500 mb-3">
+            <span>⏱ ${m.tempoHoras}h ${m.tempoMinutos}m</span><span>📅 ${mesesTotais} ${mesesTotais === 1 ? 'mês' : 'meses'}</span>
+          </div>
+          <div class="flex justify-between items-end border-t border-slate-200/60 pt-3">
+            <div>
+              <span class="text-[10px] text-slate-400 uppercase font-semibold block">À vista</span>
+              <span class="text-base font-bold text-emerald-600">${brl(valorCorrigido)}</span>
+                  <span class="text-xs text-slate-500 block">Cartão: ${brl(valorCartao(m))}</span>
+            </div>
+            <span class="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-medium">+${pct.toFixed(1)}%</span>
+          </div>
+        </div>
+      </div>
+      <div class="px-4 py-2.5 bg-slate-100/70 border-t border-slate-200/60 flex items-center gap-2">
+        <button onclick="alternarSelecao(${m.id}, ${!selecionados.has(m.id)})" class="mr-auto ${selecionados.has(m.id) ? 'bg-emerald-600' : 'bg-blue-600'} text-white px-4 py-1.5 rounded-lg text-xs font-semibold">${selecionados.has(m.id) ? '✓ Adicionado' : '+ Adicionar'}</button>
+        <button onclick="editarMovel(${m.id})" class="text-slate-600 hover:text-blue-600 p-1.5 text-xs font-medium">✏️ Editar</button>
+        <button onclick="excluirMovel(${m.id})" class="text-slate-600 hover:text-rose-600 p-1.5 text-xs font-medium">🗑️ Excluir</button>
+      </div>
+    </div>`;
+  }).join('') : `<div class="col-span-2 text-center py-8 text-slate-400 text-sm">${moveis.length ? 'Nenhum móvel encontrado na busca.' : 'Nenhum móvel cadastrado ainda. Toque no + no topo para cadastrar.'}</div>`;
+
+  const sel = itensSelecionados(), total = sel.length;
+  const mediaMin = total ? Math.round(sel.reduce((s, m) => s + minutos(m), 0) / total) : 0;
+  const mediaVal = total ? sel.reduce((s, m) => s + m.precoBase, 0) / total : 0;
+  const card = (cor, ico, tit, id, val) => `<div class="bg-white p-3 sm:p-4 rounded-2xl shadow-sm border border-slate-100 text-center"><p class="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase leading-tight">${ico} ${tit}</p><h3 class="text-lg sm:text-2xl font-bold text-slate-900 mt-1">${val}</h3></div>`;
+  $('stats').innerHTML = card('blue', '📦', 'Total de Móveis', '', total) + card('amber', '⏱', 'Tempo Médio de Montagem', '', fmtTempo(mediaMin)) + card('emerald', '💲', 'Valor Médio à Vista', '', brl(mediaVal));
+
+  atualizarOrcamento();
+}
+
+function itensSelecionados() {
+  return moveis.filter(m => selecionados.has(m.id));
+}
+
+function atualizarOrcamento() {
+  const itens = itensSelecionados();
+  $('orcTempoTotal').textContent = fmtTempo(itens.reduce((s, m) => s + minutos(m), 0));
+  $('orcValorBase').textContent = brl(itens.reduce((s, m) => s + m.precoBase, 0));
+  const subtotal = itens.reduce((s, m) => s + calcularValorComInflacao(m.precoBase, m.dataCadastro).valorCorrigido, 0);
+  if (!itens.length) { $('descontoValor').value = ''; $('foneCliente').value = ''; }
+  const desconto = calcDesconto(subtotal), totalFinal = subtotal - desconto;
+  $('orcSubtotal').textContent = brl(subtotal);
+  $('orcDesconto').textContent = desconto > 0 ? '- ' + brl(desconto) : brl(0);
+  $('orcValorFinal').textContent = brl(totalFinal);
+  const subCartao = itens.reduce((s, m) => s + valorCartao(m), 0);
+  const totalCartao = subCartao - calcDesconto(subCartao), np = parseInt($('parcelas').value) || 1;
+  $('orcValorCartao').textContent = brl(totalCartao);
+  $('orcParcela').textContent = `${np}x de ${brl(totalCartao / np)}`;
+  $('barraInfo').textContent = `${itens.length} ${itens.length === 1 ? 'móvel' : 'móveis'} · ${brl(totalFinal)}`;
+  $('barra').style.display = itens.length && !cadastroAberto && !matchMedia('(min-width:1024px)').matches ? 'flex' : 'none';
+}
+
+function copiarOrcamento(enviar) {
+  const itens = itensSelecionados();
+  const msg = $('msgCopia');
+  if (!itens.length) { msg.textContent = 'Selecione pelo menos um móvel.'; return; }
+  let total = 0, tempo = 0;
+  let t = '*📋 ORÇAMENTO DE SERVIÇO*\n\n';
+  itens.forEach((m, i) => {
+    const v = calcularValorComInflacao(m.precoBase, m.dataCadastro).valorCorrigido;
+    total += v; tempo += minutos(m);
+    t += `${i + 1}. *${m.nome}*\n`;
+  });
+  const desc = calcDesconto(total);
+  const subC = itens.reduce((s, m) => s + valorCartao(m), 0), totC = subC - calcDesconto(subC), np = parseInt($('parcelas').value) || 1;
+  const cartaoTxt = `\n💳 *No Cartão:* *${brl(totC)}* (${np}x de ${brl(totC / np)})`;
+  const pctTxt = $('descontoTipo').value === '%' && desc > 0 ? ` (${parseFloat($('descontoValor').value)}%)` : '';
+  t += `\n-----------------------------------\n⏱ *Tempo Total Estimado:* ${fmtTempo(tempo)}\n💰 ${desc > 0 ? `*Subtotal à vista:* ${brl(total)}\n🏷️ *Desconto:* - ${brl(desc)}${pctTxt}\n💰 ` : ''}*Valor à Vista:* *${brl(total - desc)}*${cartaoTxt}\n-----------------------------------\n_Valores atualizados e corrigidos. Entre em contato para agendar!_`;
+
+  if (enviar) {
+    const fone = $('foneCliente').value.replace(/\D/g, '');
+    const num = fone.length === 10 || fone.length === 11 ? '55' + fone : fone;
+    const w = window.open(`https://wa.me/${num}?text=${encodeURIComponent(t)}`, '_blank');
+    if (w) { msg.textContent = 'Abrindo o WhatsApp...'; return; }
+  }
+  const fallback = () => {
+    const ta = document.createElement('textarea');
+    ta.value = t; document.body.appendChild(ta); ta.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+    ta.remove();
+    msg.textContent = ok ? 'Orçamento copiado! Cole no WhatsApp.' : 'Não foi possível copiar automaticamente.';
+  };
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(t).then(() => { msg.textContent = 'Orçamento copiado! Cole no WhatsApp.'; }, fallback);
+  } else fallback();
+}
+
+renderizarLista();
+</script>
+</body>
+</html>
